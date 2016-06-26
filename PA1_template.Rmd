@@ -4,22 +4,54 @@ output:
   html_document:
     keep_md: true
 ---
-
-
+```{r echo=FALSE}
+library(reshape2)
+library(dplyr)
+library(ggplot2)
+Sys.setlocale("LC_ALL","English")
+```
 ## Loading and preprocessing the data
-
-
+```{r}
+input_data<-read.csv("activity.csv", stringsAsFactors = FALSE)
+steps_by_date<-melt(tapply(input_data$steps, input_data$date, sum, na.rm=TRUE))
+names(steps_by_date)<-c("date", "steps")
+```
 
 ## What is mean total number of steps taken per day?
-
-
+```{r, echo=FALSE, fig.align='left'}
+hist(steps_by_date$steps, main="Total number of steps taken each day", xlab = "Steps", ylab = "Days")
+```
+### Mean and Median ###
+```{r}
+mean(steps_by_date$steps)
+median(steps_by_date$steps)
+```
 
 ## What is the average daily activity pattern?
-
-
+```{r, echo=FALSE, fig.align='left'}
+steps_by_intervals<-tapply(input_data$steps, input_data$interval, mean, na.rm=TRUE)
+graph_data<-melt(steps_by_intervals)
+names(graph_data)<-c("interval", "steps")
+qplot(x=graph_data$interval, y=graph_data$steps, xlab="Interval", ylab="Steps", geom="line", main="Average daily activity pattern")
+```
+### Interval with maximum steps###
+```{r}
+which.max(steps_by_intervals)
+```
 
 ## Imputing missing values
-
-
-
+### Missing values number ###
+```{r, echo=FALSE,}
+length(input_data[is.na(input_data$steps), 1])
+```
+### Replacing missing values###
+```{r}
+filled_missing<-mutate(group_by(input_data, interval), steps=ifelse(is.na(steps), mean(steps, na.rm=TRUE), steps))
+weekends=c("Sat", "Sun")
+factor_lables=c("weekend", "weekday")
+data_day_type<-mutate(filled_missing, day_type=factor(ifelse(weekdays(as.POSIXct(date, format="%Y-%m-%d"), abbreviate=TRUE) %in% weekends, "weekend", "weekday"), levels = factor_lables))
+```
 ## Are there differences in activity patterns between weekdays and weekends?
+```{r, echo=FALSE}
+qplot(interval, steps, data=data_day_type, xlab="Interval", ylab="Steps", geom="line", main="Average daily activity pattern", col=day_type, facets = ~day_type)
+```
